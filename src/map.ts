@@ -5,41 +5,94 @@ const scaleUpBtn = document.querySelector('#scaleUpBtn')
 const items = [
   {
     id: 10,
-    top: 0,
-    left: 0,
-    height: 365,
-    width: 163,
-    circuit: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 362.77 131.61">
+    options: [210, 326],
+    circuit: {
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 362.77 131.61">
                 <g><path d="M179.71,59.21h0l-24.37,73.4L515.56,79.67a3,3,0,0,0,2.15-4.45L476.3,2.52a3,3,0,0,0-3.18-1.46L179.71,59.21Z"
                 transform="translate(-155.33 -1)"/></g></svg>`,
-    path: 'd4155b25cc827ac3b325a9c28e6219d6.png'
-  },
-  {
-    id: 11,
-    top: 100,
-    left: 100,
-    height: 365,
-    width: 163,
-    circuit: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 362.77 131.61">
-                <g><path d="M179.71,59.21h0l-24.37,73.4L515.56,79.67a3,3,0,0,0,2.15-4.45L476.3,2.52a3,3,0,0,0-3.18-1.46L179.71,59.21Z"
-                transform="translate(-155.33 -1)"/></g></svg>`,
-    path: 'd4155b25cc827ac3b325a9c28e6219d6.png'
-  },
+      options: [0, 0, 365, 134]
+    },
+    path: {
+      img: 'd4155b25cc827ac3b325a9c28e6219d6.png',
+      options: [0, 0, 365, 163]
+    },
+    objects: [{
+      itemId: 10,
+      options: [20, 350, 309, 309],
+      img: '45f69a9432efbfab6de982c4885ad374.png',
+      animation: {
+        repeat: true,
+        css: ''
+      }
+    }]
+  }
 ]
 
 //document.querySelector('#itemShape')
-const toHtmlShape = ({ path = '', circuit = '' }) =>
+const itemToHtmlShape = ({ path = '', circuit = '' }) =>
   `<div class="map__paths__item__area" style="background: url(${path});"></div>
-  <div class="map__path__item__circuit">${circuit}</div>`
+   <div class="map__path__item__circuit">${circuit}</div>`
+
+
+function appendToMap(className, itemId, html = '', style = '') {
+  const el = document.createElement('div')
+
+  if (style !== '') {
+    el.style.cssText = style
+  }
+
+  el.classList.add(className)
+  el.dataset.itemId = itemId
+  el.innerHTML = html
+  map.appendChild(el)
+}
 
 
 function createItems(items, cb) {
   items.forEach(item => {
-    const element = document.createElement('div')
-    element.classList.add('map__paths__item')
-    element.dataset.itemId = item.id
-    element.innerHTML = toHtmlShape(item)
-    map.appendChild(element)
+    const { objects = [], id, options, path, circuit } = item
+
+    const optionsToCss = ([top = 0, left = 0, width = 0, height = 0]) => {
+      let wh = ''
+      if (width > 0 && height > 0) {
+        wh = `width:${width}px; height:${height}px;`
+      }
+      return `top:${top}px; left:${left}px; ${wh}`
+    }
+
+    const styleArea = `${optionsToCss(path.options)}; background: url(${path.img});`
+    const styleCircuit = optionsToCss(circuit.options)
+
+    const htmlShape = `
+        <div 
+            class="map__paths__item__area" 
+            style="${styleArea}"
+        ></div>
+        <div 
+            class="map__path__item__circuit"
+            style="${styleCircuit}"
+        >
+            ${circuit.svg}
+        </div>`
+
+    appendToMap(
+      'map__paths__item',
+      id,
+      htmlShape,
+      optionsToCss(options)
+    )
+
+    objects.forEach(obj => {
+      const { options, img } = obj
+      const style = `${optionsToCss(options)}; background: url(${img});`
+
+      appendToMap(
+        'map__objects__item',
+        id,
+        '',
+        style
+      )
+    })
   })
 
   cb(items)
@@ -47,15 +100,17 @@ function createItems(items, cb) {
 
 
 const run = new Promise(function (resolve, reject) {
-  setTimeout(() => createItems(items, resolve),200)
+  setTimeout(() => createItems(items, resolve), 200)
 })
 
 run
   .then(onLoad)
 
+
 function onLoad(items) {
   const paths = document.querySelectorAll('.map__paths__item')
   const circuits = document.querySelectorAll('.map__path__item__circuit svg path')
+  const objects = document.querySelectorAll('.map__objects__item')
 
   const SCALE_TYPES = {
     UP: 'UP',
@@ -123,7 +178,7 @@ function onLoad(items) {
     let shiftY = event.clientY - path.getBoundingClientRect().top
 
     path.style.position = 'absolute'
-    path.style.zIndex = 1000
+    path.style.zIndex = 1
     map.append(path)
 
     moveAt(event.pageX, event.pageY)
