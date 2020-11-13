@@ -1,0 +1,57 @@
+body
+  //color: red
+  //background: royalblue
+  //user-select: none
+
+#map
+  position: relative
+  width: 1000px
+  height: 500px
+
+.map__objects__item
+  position: absolute
+  pointer-events: none
+  z-index: 2
+
+.map__paths__item
+  position: absolute
+  pointer-events: none
+  z-index: 1
+
+  .map__path__item__circuit
+    position: absolute
+    svg
+      display: block
+      width: 100%
+      height: 100%
+      fill: deepskyblue
+      opacity: 0
+      path
+        cursor: pointer
+        pointer-events: auto
+        //opacity: 0
+        //&:hover
+        //  opacity: 1
+
+
+
+  .map__paths__item__area
+    pointer-events: none
+    position: absolute
+    left: 0
+    top: 0
+    z-index: 1
+    width: 100%
+    height: 100%
+    background: url('')
+    background-repeat: no-repeat !important
+    background-position: 50% !important
+    background-size: cover !important
+    opacity: .3
+    //-webkit-transition-delay: .1s;
+    //-moz-transition-delay: .1s;
+    //-o-transition-delay: .1s;
+    transition-delay: .1s
+    &.is_active
+      opacity: 1
+
