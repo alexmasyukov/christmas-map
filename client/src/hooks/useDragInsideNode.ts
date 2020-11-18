@@ -23,11 +23,16 @@ interface Size {
   height: number
 }
 
+interface DragHook {
+  handleMouseEvent: MouseEventHandler
+  handleTouchEvent: TouchEventHandler
+}
+
 export function useDragInsideNode(
   node: React.RefObject<HTMLDivElement>,
   dragClassName: string = 'drag',
   draggableNodeSize: Size
-) {
+): DragHook {
   const drag: Drag = useRef({
     isDrag: false,
     startDragX: 0,
