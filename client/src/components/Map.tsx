@@ -5,10 +5,14 @@ import styles from './map.module.sass'
 
 export const Map: FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null)
-  const handleMouseEvent = useDragInsideNode(mapContainer, styles.drag, {
-    width: 2321,
-    height: 2662
-  })
+  const { handleMouseEvent, handleTouchEvent } = useDragInsideNode(
+    mapContainer,
+    styles.drag,
+    {
+      width: 2321,
+      height: 2662
+    }
+  )
 
   useEffect(() => {
     console.log('render')
@@ -22,6 +26,9 @@ export const Map: FC = () => {
         onMouseDown={handleMouseEvent}
         onMouseUp={handleMouseEvent}
         onMouseLeave={handleMouseEvent}
+        onTouchMove={handleTouchEvent}
+        onTouchStart={handleTouchEvent}
+        onTouchEnd={handleTouchEvent}
       ></div>
     </div>
   )

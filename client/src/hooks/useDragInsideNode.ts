@@ -1,8 +1,11 @@
+import { getCSSTranslate3dValues } from 'helpers'
 import React, {
   useCallback,
   useRef,
   MouseEvent,
-  MouseEventHandler
+  TouchEvent,
+  MouseEventHandler,
+  TouchEventHandler
 } from 'react'
 
 interface Drag {
@@ -24,7 +27,7 @@ export function useDragInsideNode(
   node: React.RefObject<HTMLDivElement>,
   dragClassName: string = 'drag',
   draggableNodeSize: Size
-): MouseEventHandler {
+) {
   const drag: Drag = useRef({
     isDrag: false,
     startDragX: 0,
@@ -33,7 +36,7 @@ export function useDragInsideNode(
     ty: -1000
   })
 
-  return useCallback((event: MouseEvent<HTMLDivElement>) => {
+  const handleMouseEvent = useCallback((event: MouseEvent<HTMLDivElement>) => {
     if (node.current === null) return
 
     event.stopPropagation()
@@ -73,29 +76,57 @@ export function useDragInsideNode(
       const minX = draggableNodeSize.width - node.current.clientWidth
       const minY = draggableNodeSize.height - node.current.clientHeight
 
-      if (tx > 0) {
-        tx = 0
-        drag.current.tx = 0
-      }
-
-      if (ty > 0) {
-        ty = 0
-        drag.current.ty = 0
-      }
-
-      if (tx <= -minX) {
-        tx = -minX
-        drag.current.tx = -minX
-      }
-
-      if (ty <= -minY) {
-        ty = -minY
-        drag.current.ty = -minY
-      }
+      if (tx > 0) tx = 0
+      if (tx <= -minX) tx = -minX
+      if (ty > 0) ty = 0
+      if (ty <= -minY) ty = -minY
 
       draggableNode.style.transform = `translate3d(${tx}px, ${ty}px, 0px)`
     }
 
     event.preventDefault()
   }, [])
+
+  const handleTouchEvent = useCallback((event: TouchEvent) => {
+    if (node.current === null) return
+    if (!(event.touches && event.touches.length)) return
+
+    const touch = event.touches[0]
+    const draggableNode = event.target as HTMLDivElement
+
+    if (event.type === 'touchstart') {
+      const cssLastValues = getCSSTranslate3dValues(
+        draggableNode.style.transform
+      )
+
+      let [tx, ty] = cssLastValues
+
+      drag.current = {
+        ...drag.current,
+        startDragX: touch.clientX,
+        startDragY: touch.clientY,
+        tx,
+        ty
+      }
+    }
+
+    if (event.type === 'touchmove') {
+      const indentX = drag.current.startDragX - touch.clientX
+      const indentY = drag.current.startDragY - touch.clientY
+      let tx = drag.current.tx - indentX
+      let ty = drag.current.ty - indentY
+
+      const minX = draggableNodeSize.width - node.current.clientWidth
+      const minY = draggableNodeSize.height - node.current.clientHeight
+
+      if (tx > 0) tx = 0
+      if (tx <= -minX) tx = -minX
+      if (ty > 0) ty = 0
+      if (ty <= -minY) ty = -minY
+
+      draggableNode.style.transform = `translate3d(${tx}px, ${ty}px, 0px)`
+    }
+  }, [])
+
+  return { handleMouseEvent, handleTouchEvent }
 }
