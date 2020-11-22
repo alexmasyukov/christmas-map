@@ -4,3 +4,15 @@ node_modules
 dist
 *.lock
 **.lock
+client/.eslintcache
+client/yarn.lock
+**/.eslintcache
+**/firebase.json
+**/.firebase
+**/.firebaserc
+
+
+.eslintcache
+.firebase
+.firebaserc
+firebase.json
