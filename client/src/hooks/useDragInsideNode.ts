@@ -1,137 +1,174 @@
-import { getCSSTranslate3dValues } from 'helpers'
+import { getCSSTranslate3dValues } from 'utils/helpers'
 import React, {
   useCallback,
-  useRef,
   MouseEvent,
   TouchEvent,
   MouseEventHandler,
   TouchEventHandler
 } from 'react'
+import { useRefState } from './useRefState'
 
-interface Drag {
-  current: {
-    isDrag: boolean
-    startDragX: number
-    startDragY: number
-    tx: number
-    ty: number
-  }
+interface State {
+  isDrag: boolean
+  startDragX: number
+  startDragY: number
+  x: number
+  y: number
 }
-
 interface Size {
   width: number
   height: number
 }
 
-interface DragHook {
-  handleMouseEvent: MouseEventHandler
-  handleTouchEvent: TouchEventHandler
+interface Coordinates {
+  x: number
+  y: number
 }
 
-export function useDragInsideNode(
-  node: React.RefObject<HTMLDivElement>,
-  dragClassName: string = 'drag',
+const dragToXY = (
+  draggableNode: HTMLDivElement,
+  x: string | number,
+  y: string | number
+): void => {
+  draggableNode.style.transform = `translate3d(${x}px, ${y}px, 0px)`
+}
+
+const getXYwithIndents = <T extends State>(state: T) => (event: {
+  clientX: number
+  clientY: number
+}): Coordinates => {
+  const indentX = state.startDragX - event.clientX
+  const indentY = state.startDragY - event.clientY
+  let x = state.x - indentX
+  let y = state.y - indentY
+
+  return { x, y }
+}
+
+const checkBoundaries = (
+  containerNode: HTMLDivElement,
   draggableNodeSize: Size
-): DragHook {
-  const drag: Drag = useRef({
+) => (x: number, y: number): Coordinates => {
+  const minX = draggableNodeSize.width - containerNode.clientWidth
+  const minY = draggableNodeSize.height - containerNode.clientHeight
+
+  if (x > 0) x = 0
+  if (x <= -minX) x = -minX
+  if (y > 0) y = 0
+  if (y <= -minY) y = -minY
+
+  return { x, y }
+}
+
+export const useDragInsideNode = (
+  containerNode: React.RefObject<HTMLDivElement>,
+  draggableNodeSize: Size
+): {
+  handleMouseEvent: MouseEventHandler
+  handleTouchEvent: TouchEventHandler
+} => {
+  const [stateRef, setRefState] = useRefState<State>({
     isDrag: false,
     startDragX: 0,
     startDragY: 0,
-    tx: -700,
-    ty: -1000
+    x: 0,
+    y: 0
   })
 
-  const handleMouseEvent = useCallback((event: MouseEvent<HTMLDivElement>) => {
-    if (node.current === null) return
+  const handleMouseEvent = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (containerNode.current === null) return
 
-    event.stopPropagation()
-    const draggableNode = event.target as HTMLDivElement
+      event.stopPropagation()
+      const draggableNode = event.target as HTMLDivElement
 
-    if (event.type === 'mousedown') {
-      draggableNode.classList.add(dragClassName)
+      if (event.type === 'mousedown') {
+        draggableNode.classList.add('drag')
 
-      drag.current = {
-        ...drag.current,
-        startDragX: event.clientX,
-        startDragY: event.clientY,
-        isDrag: true
+        let { x, y } = stateRef.current
+
+        if (stateRef.current.x === 0 && stateRef.current.y === 0) {
+          const [cssX, cssY] = getCSSTranslate3dValues(
+            draggableNode.style.transform
+          )
+
+          x = cssX
+          y = cssY
+        }
+
+        setRefState({
+          isDrag: true,
+          startDragX: event.clientX,
+          startDragY: event.clientY,
+          x,
+          y,
+          xL: 'sdfsdsf'
+        })
       }
-    }
 
-    const indentX = drag.current.startDragX - event.clientX
-    const indentY = drag.current.startDragY - event.clientY
-    let tx = drag.current.tx - indentX
-    let ty = drag.current.ty - indentY
+      const { x, y } = getXYwithIndents(stateRef.current)(event)
 
-    if (
-      (event.type === 'mouseup' || event.type === 'mouseleave') &&
-      drag.current.isDrag
-    ) {
-      draggableNode.classList.remove(dragClassName)
+      if (
+        (event.type === 'mouseup' || event.type === 'mouseleave') &&
+        stateRef.current.isDrag
+      ) {
+        draggableNode.classList.remove('drag')
 
-      drag.current = {
-        ...drag.current,
-        tx,
-        ty,
-        isDrag: false
+        setRefState({
+          x,
+          y,
+          isDrag: false
+        })
       }
-    }
 
-    if (event.type === 'mousemove' && drag.current.isDrag) {
-      const minX = draggableNodeSize.width - node.current.clientWidth
-      const minY = draggableNodeSize.height - node.current.clientHeight
+      if (event.type === 'mousemove' && stateRef.current.isDrag) {
+        const dragCoords = checkBoundaries(
+          containerNode.current,
+          draggableNodeSize
+        )(x, y)
 
-      if (tx > 0) tx = 0
-      if (tx <= -minX) tx = -minX
-      if (ty > 0) ty = 0
-      if (ty <= -minY) ty = -minY
-
-      draggableNode.style.transform = `translate3d(${tx}px, ${ty}px, 0px)`
-    }
-
-    event.preventDefault()
-  }, [])
-
-  const handleTouchEvent = useCallback((event: TouchEvent) => {
-    if (node.current === null) return
-    if (!(event.touches && event.touches.length)) return
-
-    const touch = event.touches[0]
-    const draggableNode = event.target as HTMLDivElement
-
-    if (event.type === 'touchstart') {
-      const cssLastValues = getCSSTranslate3dValues(
-        draggableNode.style.transform
-      )
-
-      let [tx, ty] = cssLastValues
-
-      drag.current = {
-        ...drag.current,
-        startDragX: touch.clientX,
-        startDragY: touch.clientY,
-        tx,
-        ty
+        dragToXY(draggableNode, dragCoords.x, dragCoords.y)
       }
-    }
 
-    if (event.type === 'touchmove') {
-      const indentX = drag.current.startDragX - touch.clientX
-      const indentY = drag.current.startDragY - touch.clientY
-      let tx = drag.current.tx - indentX
-      let ty = drag.current.ty - indentY
+      event.preventDefault()
+    },
+    [containerNode]
+  )
 
-      const minX = draggableNodeSize.width - node.current.clientWidth
-      const minY = draggableNodeSize.height - node.current.clientHeight
+  const handleTouchEvent = useCallback(
+    (event: TouchEvent) => {
+      if (containerNode.current === null) return
+      if (!(event.touches && event.touches.length)) return
 
-      if (tx > 0) tx = 0
-      if (tx <= -minX) tx = -minX
-      if (ty > 0) ty = 0
-      if (ty <= -minY) ty = -minY
+      const touch = event.touches[0]
+      const draggableNode = event.target as HTMLDivElement
 
-      draggableNode.style.transform = `translate3d(${tx}px, ${ty}px, 0px)`
-    }
-  }, [])
+      if (event.type === 'touchstart') {
+        const cssLastValues = getCSSTranslate3dValues(
+          draggableNode.style.transform
+        )
+        const [x, y] = cssLastValues
+
+        setRefState({
+          startDragX: touch.clientX,
+          startDragY: touch.clientY,
+          x,
+          y
+        })
+      }
+
+      if (event.type === 'touchmove') {
+        const { x, y } = getXYwithIndents(stateRef.current)(touch)
+        const dragCoords = checkBoundaries(
+          containerNode.current,
+          draggableNodeSize
+        )(x, y)
+
+        dragToXY(draggableNode, dragCoords.x, dragCoords.y)
+      }
+    },
+    [containerNode]
+  )
 
   return { handleMouseEvent, handleTouchEvent }
 }
